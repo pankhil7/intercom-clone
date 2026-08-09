@@ -125,7 +125,7 @@ def list_conversations(
 
 
 @router.post("", response_model=ConversationListItem, status_code=status.HTTP_201_CREATED)
-def create_conversation(
+async def create_conversation(
     payload: ConversationCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -250,7 +250,7 @@ def get_conversation(
 
 
 @router.patch("/{conversation_id}", response_model=ConversationListItem)
-def update_conversation(
+async def update_conversation(
     conversation_id: UUID,
     payload: ConversationUpdate,
     current_user: User = Depends(get_current_user),
@@ -305,7 +305,7 @@ def update_conversation(
 
 
 @router.post("/{conversation_id}/messages", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
-def send_message(
+async def send_message(
     conversation_id: UUID,
     payload: MessageCreate,
     current_user: User = Depends(get_current_user),
@@ -399,7 +399,7 @@ def get_messages(
 
 
 @router.post("/{conversation_id}/assign", response_model=ConversationListItem)
-def assign_conversation(
+async def assign_conversation(
     conversation_id: UUID,
     body: dict,
     current_user: User = Depends(get_current_user),
@@ -440,7 +440,7 @@ def assign_conversation(
 
 
 @router.post("/{conversation_id}/unassign", response_model=ConversationListItem)
-def unassign_conversation(
+async def unassign_conversation(
     conversation_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -469,7 +469,7 @@ def unassign_conversation(
 
 
 @router.post("/{conversation_id}/resolve", response_model=ConversationListItem)
-def resolve_conversation(
+async def resolve_conversation(
     conversation_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -506,7 +506,7 @@ def resolve_conversation(
 
 
 @router.post("/{conversation_id}/reopen", response_model=ConversationListItem)
-def reopen_conversation(
+async def reopen_conversation(
     conversation_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

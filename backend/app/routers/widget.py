@@ -177,7 +177,7 @@ def identify(
 
 
 @router.post("/conversations", response_model=WidgetConversationResponse, status_code=status.HTTP_201_CREATED)
-def create_widget_conversation(
+async def create_widget_conversation(
     payload: WidgetConversationCreate,
     session: dict = Depends(get_widget_session),
     db: Session = Depends(get_db),
@@ -388,7 +388,7 @@ class SendMessageRequest(BaseModel):
 
 
 @router.post("/conversations/{conversation_id}/messages")
-def send_widget_message(
+async def send_widget_message(
     conversation_id: UUID,
     payload: SendMessageRequest,
     session: dict = Depends(get_widget_session),
