@@ -14,7 +14,10 @@ from app.models.page_view import PageView
 from app.models.user import User
 from app.schemas.contact import ContactCreate, ContactResponse, ContactUpdate
 
-router = APIRouter(prefix="/contacts", tags=["contacts"])
+from app.logging_config import get_logger
+
+router = APIRouter(prefix="/contacts", tags=["contacts"])
+logger = get_logger(__name__)
 
 
 @router.get("", response_model=List[ContactResponse])
@@ -58,6 +61,7 @@ def create_contact(
     db.add(contact)
     db.commit()
     db.refresh(contact)
+    logger.info("contact_created", contact_id=str(contact.id), org_id=str(current_user.organization_id))
     return contact
 
 

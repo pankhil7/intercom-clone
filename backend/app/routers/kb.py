@@ -21,7 +21,10 @@ from app.schemas.kb import (
     CategoryUpdate,
 )
 
-router = APIRouter(prefix="/kb", tags=["knowledge-base"])
+from app.logging_config import get_logger
+
+router = APIRouter(prefix="/kb", tags=["knowledge-base"])
+logger = get_logger(__name__)
 
 
 def _strip_html(html: str) -> str:
@@ -282,6 +285,7 @@ def create_article(
 
     db.commit()
     db.refresh(article)
+    logger.info("kb_article_created", article_id=str(article.id), status=article.status, org_id=str(current_user.organization_id))
     return article
 
 
@@ -366,6 +370,8 @@ def update_article(
 
     db.commit()
     db.refresh(article)
+    if payload.status is not None:
+        logger.info("kb_article_status_changed", article_id=str(article.id), status=article.status, org_id=str(current_user.organization_id))
     return article
 
 

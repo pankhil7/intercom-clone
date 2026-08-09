@@ -17,7 +17,10 @@ from app.models.webhook_delivery import WebhookDelivery
 from app.schemas.webhook import DeliveryResponse, WebhookCreate, WebhookResponse, WebhookUpdate
 from app.services.webhook_service import fire_event
 
-router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+from app.logging_config import get_logger
+
+router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+logger = get_logger(__name__)
 
 
 @router.get("", response_model=List[WebhookResponse])
@@ -50,6 +53,7 @@ def create_webhook(
     db.add(webhook)
     db.commit()
     db.refresh(webhook)
+    logger.info("webhook_created", webhook_id=str(webhook.id), events=payload.events, org_id=str(current_user.organization_id))
     return webhook
 
 
@@ -94,6 +98,7 @@ def delete_webhook(
 
     db.delete(webhook)
     db.commit()
+    logger.info("webhook_deleted", webhook_id=str(webhook_id), org_id=str(current_user.organization_id))
 
 
 @router.get("/{webhook_id}/deliveries", response_model=List[DeliveryResponse])

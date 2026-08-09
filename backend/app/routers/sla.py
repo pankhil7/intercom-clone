@@ -10,7 +10,10 @@ from app.dependencies import get_current_admin, get_current_user
 from app.models.sla_policy import SLAPolicy
 from app.models.user import User
 
-router = APIRouter(prefix="/sla", tags=["sla"])
+from app.logging_config import get_logger
+
+router = APIRouter(prefix="/sla", tags=["sla"])
+logger = get_logger(__name__)
 
 
 class SLAPolicyCreate(BaseModel):

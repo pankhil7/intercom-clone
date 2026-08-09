@@ -1,6 +1,5 @@
 import hmac
 import hashlib
-import logging
 import time
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
@@ -9,10 +8,11 @@ from typing import Optional
 
 from app.config import settings
 from app.database import get_db
+from app.logging_config import get_logger
 from app.services.email_service import process_inbound_email
 
 router = APIRouter(prefix="/email", tags=["email"])
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _verify_mailgun_signature(timestamp: str, token: str, signature: str) -> bool:
@@ -64,6 +64,7 @@ async def inbound_email(
 ):
     # Verify the request genuinely came from Mailgun
     if not _verify_mailgun_signature(timestamp or "", token or "", signature or ""):
+        logger.warning("inbound_email_rejected", reason="invalid_signature")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Mailgun signature")
 
     # Normalise into the shape email_service expects
@@ -78,5 +79,6 @@ async def inbound_email(
         "references": references or "",
     }
 
+    logger.info("inbound_email_received", to=payload["to_email"], message_id=payload["message_id"] or "none")
     await process_inbound_email(db=db, payload=payload)
     return {"message": "ok"}

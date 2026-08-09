@@ -26,8 +26,10 @@ from app.schemas.conversation import (
 from app.services.email_service import send_reply_email
 from app.services.webhook_service import fire_event
 from app.socket.server import sio
+from app.logging_config import get_logger
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
+logger = get_logger(__name__)
 
 
 def _build_list_item(conv: Conversation, db: Session) -> ConversationListItem:
@@ -156,6 +158,12 @@ def create_conversation(
     db.commit()
     db.refresh(conv)
 
+    logger.info("conversation_created",
+        conversation_id=str(conv.id),
+        channel=conv.channel,
+        org_id=str(current_user.organization_id),
+        created_by=str(current_user.id),
+    )
     asyncio.create_task(
         sio.emit(
             "conversation_created",
@@ -256,10 +264,23 @@ def update_conversation(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
 
     if payload.status is not None:
+        old_status = conv.status
         conv.status = payload.status
         if payload.status == "resolved":
             conv.resolved_at = datetime.utcnow()
+        if old_status != payload.status:
+            logger.info("conversation_status_changed",
+                conversation_id=str(conv.id),
+                old_status=old_status,
+                new_status=payload.status,
+                changed_by=str(current_user.id),
+            )
     if payload.assigned_to is not None:
+        logger.info("conversation_assigned",
+            conversation_id=str(conv.id),
+            assigned_to=str(payload.assigned_to),
+            assigned_by=str(current_user.id),
+        )
         conv.assigned_to = payload.assigned_to
     if payload.snoozed_until is not None:
         conv.snoozed_until = payload.snoozed_until
@@ -314,6 +335,14 @@ def send_message(
     conv.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(msg)
+
+    logger.info("message_sent",
+        message_id=str(msg.id),
+        conversation_id=str(conv.id),
+        channel=conv.channel,
+        sender_id=str(current_user.id),
+        first_response=is_first_agent_message,
+    )
 
     if conv.channel == "email":
         asyncio.create_task(

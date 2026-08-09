@@ -12,7 +12,10 @@ from app.dependencies import get_current_admin, get_current_user
 from app.models.api_key import APIKey
 from app.models.user import User
 
-router = APIRouter(prefix="/api-keys", tags=["api-keys"])
+from app.logging_config import get_logger
+
+router = APIRouter(prefix="/api-keys", tags=["api-keys"])
+logger = get_logger(__name__)
 
 
 class APIKeyResponse(BaseModel):
@@ -89,6 +92,7 @@ def create_api_key(
     db.commit()
     db.refresh(api_key)
 
+    logger.info("api_key_created", key_id=str(api_key.id), name=api_key.name, scopes=payload.scopes, org_id=str(current_user.organization_id))
     return APIKeyCreateResponse(
         id=api_key.id,
         name=api_key.name,
@@ -114,3 +118,4 @@ def deactivate_api_key(
 
     api_key.is_active = False
     db.commit()
+    logger.info("api_key_revoked", key_id=str(key_id), org_id=str(current_user.organization_id))

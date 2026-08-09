@@ -1,4 +1,3 @@
-import logging
 from contextlib import asynccontextmanager
 import os
 import socketio
@@ -7,29 +6,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
+from app.logging_config import setup_logging, get_logger
 from app.socket.server import sio
 import app.socket.agent_namespace  # noqa: F401 — registers handlers
 import app.socket.widget_namespace  # noqa: F401 — registers handlers
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    logger.info("Starting up...")
+    logger.info("app_starting", debug=settings.DEBUG, version="1.0.0")
     from app.background.scheduler import start_scheduler
-
     start_scheduler()
     yield
-    # Shutdown
-    logger.info("Shutting down...")
+    logger.info("app_stopping")
     from app.background.scheduler import stop_scheduler
-
     stop_scheduler()
 
 
@@ -42,6 +35,9 @@ fastapi_app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
 )
+
+from app.middleware.logging_middleware import RequestLoggingMiddleware
+fastapi_app.add_middleware(RequestLoggingMiddleware)
 
 # CORS — explicit origins required when allow_credentials=True (wildcard forbidden by spec)
 _allowed_origins = list(filter(None, [settings.FRONTEND_URL, settings.WIDGET_CDN_URL]))

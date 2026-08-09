@@ -11,7 +11,10 @@ from app.dependencies import get_current_admin, get_current_user
 from app.models.inbox import Inbox
 from app.models.user import User
 
-router = APIRouter(prefix="/inboxes", tags=["inboxes"])
+from app.logging_config import get_logger
+
+router = APIRouter(prefix="/inboxes", tags=["inboxes"])
+logger = get_logger(__name__)
 
 
 class InboxCreate(BaseModel):
@@ -73,6 +76,7 @@ def create_inbox(
     db.add(inbox)
     db.commit()
     db.refresh(inbox)
+    logger.info("inbox_created", inbox_id=str(inbox.id), channel=inbox.channel, org_id=str(current_user.organization_id))
     return {"inbox": _inbox_dict(inbox)}
 
 

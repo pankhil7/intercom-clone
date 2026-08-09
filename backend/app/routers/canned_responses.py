@@ -11,7 +11,10 @@ from app.dependencies import get_current_user
 from app.models.canned_response import CannedResponse
 from app.models.user import User
 
-router = APIRouter(prefix="/canned-responses", tags=["canned-responses"])
+from app.logging_config import get_logger
+
+router = APIRouter(prefix="/canned-responses", tags=["canned-responses"])
+logger = get_logger(__name__)
 
 
 class CannedResponseCreate(BaseModel):

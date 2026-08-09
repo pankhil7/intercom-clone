@@ -7,7 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_admin, get_current_user
+from app.logging_config import get_logger
 from app.models.invitation import Invitation
+
+logger = get_logger(__name__)
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.auth import TokenResponse
@@ -94,6 +97,7 @@ def deactivate_member(
 
     member.is_active = False
     db.commit()
+    logger.info("member_deactivated", user_id=str(user_id), deactivated_by=str(current_user.id))
 
 
 @router.post("/invitations", response_model=InvitationResponse, status_code=status.HTTP_201_CREATED)
@@ -131,6 +135,11 @@ def create_invitation(
     db.add(invitation)
     db.commit()
     db.refresh(invitation)
+    logger.info("invitation_sent",
+        invited_by=str(current_user.id),
+        role=payload.role,
+        org_id=str(current_user.organization_id),
+    )
     return invitation
 
 

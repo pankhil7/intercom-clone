@@ -12,7 +12,10 @@ from app.dependencies import get_current_admin, get_current_user
 from app.models.custom_domain import CustomDomain
 from app.models.user import User
 
-router = APIRouter(prefix="/domains", tags=["domains"])
+from app.logging_config import get_logger
+
+router = APIRouter(prefix="/domains", tags=["domains"])
+logger = get_logger(__name__)
 
 
 class DomainCreate(BaseModel):

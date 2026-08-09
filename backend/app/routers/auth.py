@@ -2,7 +2,10 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 from typing import Optional
 
+from app.logging_config import get_logger
 from app.config import settings
+
+logger = get_logger(__name__)
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.organization import Organization
@@ -82,7 +85,7 @@ def signup(payload: SignupRequest, response: Response, db: Session = Depends(get
 
     _set_refresh_cookie(response, refresh_token)
 
-    # Only the short-lived access token goes in the response body
+    logger.info("user_signed_up", user_id=str(user.id), org_id=str(org.id), role=user.role)
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -95,6 +98,7 @@ def signup(payload: SignupRequest, response: Response, db: Session = Depends(get
 def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = authenticate_user(db, payload.email, payload.password)
     if not user:
+        logger.warning("login_failed", email_domain=payload.email.split("@")[-1])  # domain only, not full email
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
@@ -104,6 +108,7 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
 
     _set_refresh_cookie(response, refresh_token)
 
+    logger.info("user_logged_in", user_id=str(user.id), org_id=str(user.organization_id), role=user.role)
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -129,11 +134,13 @@ def refresh(
     token_data = decode_refresh_token(refresh_token)
     if not token_data:
         _clear_refresh_cookie(response)
+        logger.warning("token_refresh_failed", reason="invalid_or_expired")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
 
     user = db.query(User).filter(User.id == token_data["sub"], User.is_active == True).first()
     if not user:
         _clear_refresh_cookie(response)
+        logger.warning("token_refresh_failed", reason="user_not_found")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
@@ -143,6 +150,7 @@ def refresh(
 
     _set_refresh_cookie(response, new_refresh_token)
 
+    logger.info("token_refreshed", user_id=str(user.id), org_id=str(user.organization_id))
     return {
         "access_token": new_access_token,
         "token_type": "bearer",
@@ -154,6 +162,7 @@ def refresh(
 @router.post("/logout")
 def logout(response: Response, current_user: User = Depends(get_current_user)):
     _clear_refresh_cookie(response)
+    logger.info("user_logged_out", user_id=str(current_user.id))
     return {"message": "ok"}
 
 

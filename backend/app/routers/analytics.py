@@ -20,7 +20,10 @@ from app.schemas.analytics import (
     ResolutionRateResponse,
 )
 
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+from app.logging_config import get_logger
+
+router = APIRouter(prefix="/analytics", tags=["analytics"])
+logger = get_logger(__name__)
 
 
 def _parse_dt(value: Optional[str], default: datetime) -> datetime:

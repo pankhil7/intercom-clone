@@ -7,7 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.logging_config import get_logger
 from app.models.ai_draft import AIDraft
+
+logger = get_logger(__name__)
 from app.models.conversation import Conversation
 from app.models.kb_article import KBArticle
 from app.models.user import User
@@ -30,6 +33,7 @@ def summarize(
     if not conv:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
 
+    logger.info("ai_summarize_requested", conversation_id=str(conversation_id), requested_by=str(current_user.id))
     result = summarize_conversation(conversation=conv, db=db)
     return result
 
@@ -47,6 +51,7 @@ def draft(
     if not conv:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
 
+    logger.info("ai_draft_requested", conversation_id=str(conversation_id), requested_by=str(current_user.id))
     ai_draft = generate_draft(conversation=conv, db=db)
 
     return DraftResponse(
