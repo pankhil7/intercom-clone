@@ -1,0 +1,18 @@
+from app.routers import (
+    auth,
+    team,
+    conversations,
+    contacts,
+    inboxes,
+    kb,
+    canned_responses,
+    ai,
+    email_inbound,
+    domains,
+    sla,
+    webhooks,
+    api_keys,
+    analytics,
+    widget,
+    public_kb,
+)
