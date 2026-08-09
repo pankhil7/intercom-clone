@@ -345,9 +345,16 @@ async def send_message(
         first_response=is_first_agent_message,
     )
 
-    if conv.channel == "email":
+    if conv.channel == "email" and conv.contact and conv.contact.email:
         asyncio.create_task(
-            send_reply_email(conversation=conv, message=msg, db=db)
+            send_reply_email(
+                to_email=conv.contact.email,
+                subject=conv.subject or "(no subject)",
+                content=msg.content,
+                conversation_id=str(conv.id),
+                our_message_id=str(msg.id),
+                from_name=current_user.full_name or "Support",
+            )
         )
 
     asyncio.create_task(
