@@ -1,5 +1,4 @@
 import re
-import json
 import hmac
 import hashlib
 import logging
@@ -57,38 +56,33 @@ def find_or_create_contact(db: Session, org_id, email: str, name: str = None) ->
 
 
 async def process_inbound_email(db: Session, payload: dict):
-    """Process a Cloudmailin inbound email payload."""
+    """
+    Process a Mailgun inbound email payload.
+    Expected keys (normalised by the router):
+      from_email, to_email, subject, plain, html,
+      message_id, in_reply_to, references
+    """
     try:
-        headers = payload.get('headers', {})
-        if isinstance(headers, str):
-            headers = json.loads(headers)
-
-        envelope = payload.get('envelope', {})
+        from_name, from_email = parse_email_address(payload.get('from_email', ''))
+        to_email = payload.get('to_email', '').lower().strip()
+        subject = payload.get('subject', '(no subject)').strip()
         plain = payload.get('plain', '')
         html = payload.get('html', '')
-
-        message_id = headers.get('Message-ID', headers.get('message-id', '')).strip('<>').strip()
-        in_reply_to = headers.get('In-Reply-To', headers.get('in-reply-to', '')).strip('<>').strip()
-        references_raw = headers.get('References', headers.get('references', ''))
-        references = parse_references(references_raw)
-
-        from_raw = headers.get('From', headers.get('from', envelope.get('from', '')))
-        from_name, from_email = parse_email_address(from_raw)
-
-        to_email = envelope.get('to', headers.get('To', '')).lower().strip()
-        subject = headers.get('Subject', headers.get('subject', '(no subject)')).strip()
+        message_id = payload.get('message_id', '').strip('<>').strip()
+        in_reply_to = payload.get('in_reply_to', '').strip('<>').strip()
+        references = parse_references(payload.get('references', ''))
 
         # Find inbox by email address
         inbox = db.query(Inbox).filter(
             Inbox.email_address == to_email,
-            Inbox.channel_type == 'email',
+            Inbox.channel == 'email',
             Inbox.is_active == True
         ).first()
 
         if not inbox:
-            # Try matching any email inbox in any org (for demo purposes)
+            # Fallback: any active email inbox (useful for single-org demos)
             inbox = db.query(Inbox).filter(
-                Inbox.channel_type == 'email',
+                Inbox.channel == 'email',
                 Inbox.is_active == True
             ).first()
 

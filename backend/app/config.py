@@ -27,14 +27,12 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama3-8b-8192"
 
-    # Mailgun (outbound email)
+    # Mailgun (outbound + inbound email)
     MAILGUN_API_KEY: str = ""
     MAILGUN_DOMAIN: str = ""
     MAILGUN_FROM_EMAIL: str = ""
-
-    # Cloudmailin (inbound email)
-    CLOUDMAILIN_SECRET: str = ""
-    CLOUDMAILIN_ADDRESS: str = ""
+    # Mailgun dashboard → Webhooks → HTTP webhook signing key (different from API key)
+    MAILGUN_WEBHOOK_SIGNING_KEY: str = ""
 
     class Config:
         env_file = ".env"
