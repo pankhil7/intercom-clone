@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Widget Demo — Intercom Clone</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f9fafb; }
+    .hero {
+      max-width: 700px;
+      margin: 80px auto;
+      padding: 0 24px;
+      text-align: center;
+    }
+    h1 { font-size: 2.5rem; color: #111827; font-weight: 700; margin-bottom: 16px; }
+    p { font-size: 1.1rem; color: #6b7280; line-height: 1.6; margin-bottom: 24px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      border-radius: 9999px;
+      padding: 6px 16px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 48px;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+    .feature-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: left;
+    }
+    .feature-card h3 { font-size: 0.9rem; color: #111827; margin-bottom: 6px; }
+    .feature-card p { font-size: 0.8rem; color: #6b7280; }
+    .arrow {
+      position: fixed;
+      bottom: 100px;
+      right: 90px;
+      font-size: 0.875rem;
+      color: #4f46e5;
+      font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="badge">
+      <span>🚀</span>
+      Live Widget Demo
+    </div>
+    <h1>Intercom Clone Widget</h1>
+    <p>
+      This page demonstrates the embeddable live chat widget.
+      Click the chat button in the bottom-right corner to start a conversation.
+    </p>
+    <div class="features">
+      <div class="feature-card">
+        <h3>💬 Live Chat</h3>
+        <p>Real-time messaging powered by Socket.io with typing indicators</p>
+      </div>
+      <div class="feature-card">
+        <h3>📚 KB Suggestions</h3>
+        <p>Searches your knowledge base as you type to deflect support tickets</p>
+      </div>
+      <div class="feature-card">
+        <h3>🔒 Secure Sessions</h3>
+        <p>HMAC-signed widget tokens with persistent localStorage sessions</p>
+      </div>
+      <div class="feature-card">
+        <h3>📊 Page Tracking</h3>
+        <p>Automatically tracks page views for agent context (SPA-compatible)</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow">
+    <span>Try it! 👇</span>
+  </div>
+
+  <!-- Widget installation snippet -->
+  <script>
+    window.InboxWidget = {
+      widgetKey: 'YOUR_WIDGET_KEY_HERE',
+      apiBase: 'http://localhost:8000/api/v1',
+      socketUrl: 'http://localhost:8000',
+      primaryColor: '#4f46e5',
+      greeting: 'Hi! How can we help you today? 👋',
+      position: 'bottom-right',
+    };
+  </script>
+  <script src="./dist/widget.iife.js"></script>
+</body>
+</html>
