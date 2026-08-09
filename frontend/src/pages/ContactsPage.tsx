@@ -1,12 +1,91 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { contactsApi } from '@/api/contacts'
-import { Search, Users } from 'lucide-react'
+import { Search, Users, Plus, X } from 'lucide-react'
 import { timeAgo, initials } from '@/utils/format'
+
+function NewContactModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
+  const qc = useQueryClient()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+
+  const mutation = useMutation({
+    mutationFn: () => contactsApi.create({ name: name.trim() || undefined, email: email.trim() || undefined, phone: phone.trim() || undefined }),
+    onSuccess: (contact: any) => {
+      qc.invalidateQueries({ queryKey: ['contacts'] })
+      onCreated(contact.id)
+    },
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim() && !email.trim()) return
+    mutation.mutate()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-gray-900">New Contact</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded"><X size={18} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Jane Doe"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="jane@example.com"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-gray-400 font-normal">(optional)</span></label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="+1 555 000 0000"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+          </div>
+          {!name.trim() && !email.trim() && (
+            <p className="text-xs text-gray-400">Provide at least a name or email.</p>
+          )}
+          {mutation.isError && <p className="text-sm text-red-600">Failed to create contact. Please try again.</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+            <button
+              type="submit"
+              disabled={mutation.isPending || (!name.trim() && !email.trim())}
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {mutation.isPending ? 'Creating…' : 'Create'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
 
 export default function ContactsPage() {
   const [search, setSearch] = useState('')
+  const [showModal, setShowModal] = useState(false)
   const navigate = useNavigate()
 
   const { data, isLoading } = useQuery({
@@ -15,12 +94,27 @@ export default function ContactsPage() {
     staleTime: 30_000,
   })
 
-  const contacts: any[] = data?.contacts || []
+  const contacts: any[] = Array.isArray(data) ? data : []
 
   return (
+    <>
+    {showModal && (
+      <NewContactModal
+        onClose={() => setShowModal(false)}
+        onCreated={(id) => { setShowModal(false); navigate(`/contacts/${id}`) }}
+      />
+    )}
     <div className="h-full flex flex-col bg-white">
       <div className="px-6 py-4 border-b border-gray-200">
-        <h1 className="text-xl font-semibold text-gray-900 mb-3">Contacts</h1>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-semibold text-gray-900">Contacts</h1>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+          >
+            <Plus size={14} /> New Contact
+          </button>
+        </div>
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -86,5 +180,6 @@ export default function ContactsPage() {
         )}
       </div>
     </div>
+    </>
   )
 }
