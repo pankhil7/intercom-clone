@@ -19,7 +19,7 @@ from app.services.webhook_service import fire_event
 
 from app.logging_config import get_logger
 
-router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = get_logger(__name__)
 
 

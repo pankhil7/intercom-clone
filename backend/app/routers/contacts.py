@@ -16,7 +16,7 @@ from app.schemas.contact import ContactCreate, ContactResponse, ContactUpdate
 
 from app.logging_config import get_logger
 
-router = APIRouter(prefix="/contacts", tags=["contacts"])
+router = APIRouter(prefix="/contacts", tags=["contacts"])
 logger = get_logger(__name__)
 
 

@@ -22,7 +22,7 @@ from app.schemas.analytics import (
 
 from app.logging_config import get_logger
 
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+router = APIRouter(prefix="/analytics", tags=["analytics"])
 logger = get_logger(__name__)
 
 

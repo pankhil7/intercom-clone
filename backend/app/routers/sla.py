@@ -12,7 +12,7 @@ from app.models.user import User
 
 from app.logging_config import get_logger
 
-router = APIRouter(prefix="/sla", tags=["sla"])
+router = APIRouter(prefix="/sla", tags=["sla"])
 logger = get_logger(__name__)
 
 

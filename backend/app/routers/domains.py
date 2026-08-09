@@ -14,7 +14,7 @@ from app.models.user import User
 
 from app.logging_config import get_logger
 
-router = APIRouter(prefix="/domains", tags=["domains"])
+router = APIRouter(prefix="/domains", tags=["domains"])
 logger = get_logger(__name__)
 
 

@@ -14,7 +14,7 @@ from app.models.user import User
 
 from app.logging_config import get_logger
 
-router = APIRouter(prefix="/api-keys", tags=["api-keys"])
+router = APIRouter(prefix="/api-keys", tags=["api-keys"])
 logger = get_logger(__name__)
 
 

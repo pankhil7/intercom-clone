@@ -23,7 +23,7 @@ from app.schemas.kb import (
 
 from app.logging_config import get_logger
 
-router = APIRouter(prefix="/kb", tags=["knowledge-base"])
+router = APIRouter(prefix="/kb", tags=["knowledge-base"])
 logger = get_logger(__name__)
 
 

@@ -13,7 +13,7 @@ from app.models.user import User
 
 from app.logging_config import get_logger
 
-router = APIRouter(prefix="/canned-responses", tags=["canned-responses"])
+router = APIRouter(prefix="/canned-responses", tags=["canned-responses"])
 logger = get_logger(__name__)
 
 

@@ -13,7 +13,7 @@ from app.models.user import User
 
 from app.logging_config import get_logger
 
-router = APIRouter(prefix="/inboxes", tags=["inboxes"])
+router = APIRouter(prefix="/inboxes", tags=["inboxes"])
 logger = get_logger(__name__)
 
 
