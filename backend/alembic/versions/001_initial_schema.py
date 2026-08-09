@@ -20,12 +20,15 @@ def upgrade() -> None:
     op.create_table('organizations',
         sa.Column('id', postgresql.UUID(as_uuid=True), server_default=sa.text('gen_random_uuid()'), nullable=False),
         sa.Column('name', sa.String(255), nullable=False),
-        sa.Column('slug', sa.String(255), nullable=False),
+        sa.Column('slug', sa.String(100), nullable=False),
+        sa.Column('plan', sa.String(50), server_default='free', nullable=False),
+        sa.Column('widget_color', sa.String(7), server_default='#6366f1', nullable=True),
         sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('slug'),
     )
+    op.create_index('ix_organizations_slug', 'organizations', ['slug'])
 
     # users
     op.create_table('users',
