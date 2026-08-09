@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { conversationsApi } from '@/api/conversations'
 import { useConversationStore } from '@/store/conversation.store'
 import ConversationItem from './ConversationItem'
-import { MessageSquare, Mail, RefreshCw } from 'lucide-react'
+import NewConversationModal from './NewConversationModal'
+import { MessageSquare, Mail, RefreshCw, Plus } from 'lucide-react'
 
 interface Props {
   activeId?: string
@@ -17,6 +19,7 @@ const STATUS_TABS = [
 
 export default function ConversationList({ activeId, onSelect }: Props) {
   const { filters, setFilters } = useConversationStore()
+  const [showModal, setShowModal] = useState(false)
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['conversations', filters],
@@ -29,17 +32,33 @@ export default function ConversationList({ activeId, onSelect }: Props) {
     refetchInterval: 30_000,
   })
 
-  const conversations = data?.conversations || []
+  const conversations: any[] = Array.isArray(data) ? data : []
 
   return (
+    <>
+    {showModal && (
+      <NewConversationModal
+        onClose={() => setShowModal(false)}
+        onCreated={(id) => { setShowModal(false); onSelect(id) }}
+      />
+    )}
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-100">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-gray-900">Inbox</h2>
-          <button onClick={() => refetch()} className="text-gray-400 hover:text-gray-600 p-1 rounded">
-            <RefreshCw size={14} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowModal(true)}
+              className="text-gray-400 hover:text-indigo-600 p-1 rounded"
+              title="New conversation"
+            >
+              <Plus size={16} />
+            </button>
+            <button onClick={() => refetch()} className="text-gray-400 hover:text-gray-600 p-1 rounded">
+              <RefreshCw size={14} />
+            </button>
+          </div>
         </div>
 
         {/* Status tabs */}
@@ -112,5 +131,6 @@ export default function ConversationList({ activeId, onSelect }: Props) {
         )}
       </div>
     </div>
+    </>
   )
 }
