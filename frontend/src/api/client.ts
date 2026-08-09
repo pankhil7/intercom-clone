@@ -17,11 +17,13 @@ apiClient.interceptors.request.use((config) => {
 
 // On 401 — silently call /auth/refresh (cookie is sent automatically),
 // update the in-memory access token, then retry the original request once.
+// Skip retry if the failing request IS the refresh endpoint (avoids infinite loop).
 apiClient.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config
-    if (err.response?.status === 401 && !original._retry) {
+    const isRefreshCall = original?.url?.includes('/auth/refresh')
+    if (err.response?.status === 401 && !original._retry && !isRefreshCall) {
       original._retry = true
       try {
         // Cookie is sent automatically — no token needed in the request body
