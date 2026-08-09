@@ -51,6 +51,13 @@ def upgrade():
     if _col_exists('users', 'invited_by_id'):
         op.alter_column('users', 'invited_by_id', new_column_name='invited_by')
 
+    # --- webhook_deliveries ---
+    # Add event_type and duration_ms which are in the model but missing from migration
+    if not _col_exists('webhook_deliveries', 'event_type'):
+        op.add_column('webhook_deliveries', sa.Column('event_type', sa.String(100), nullable=True))
+    if not _col_exists('webhook_deliveries', 'duration_ms'):
+        op.add_column('webhook_deliveries', sa.Column('duration_ms', sa.Integer(), nullable=True))
+
 
 def downgrade():
     if _col_exists('conversations', 'assigned_to'):

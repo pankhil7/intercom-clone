@@ -35,13 +35,15 @@ COOKIE_MAX_AGE = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60  # seconds
 
 
 def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
-    """Write the refresh token as an HttpOnly, Secure, SameSite=lax cookie."""
+    """Write the refresh token as an HttpOnly, Secure, SameSite=None cookie.
+    SameSite=None is required for cross-origin requests (Vercel → Render).
+    """
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh_token,
         httponly=True,                        # JS cannot read it
-        secure=not settings.DEBUG,            # HTTPS only in production
-        samesite="lax",                       # sent on top-level navigations, blocks CSRF
+        secure=True,                          # SameSite=None requires Secure=True
+        samesite="none",                      # cross-origin cookie (frontend on different domain)
         max_age=COOKIE_MAX_AGE,
         path="/api/v1/auth",                  # scoped — only sent to auth endpoints
     )
@@ -52,8 +54,8 @@ def _clear_refresh_cookie(response: Response) -> None:
         key=REFRESH_COOKIE_NAME,
         path="/api/v1/auth",
         httponly=True,
-        secure=not settings.DEBUG,
-        samesite="lax",
+        secure=True,
+        samesite="none",
     )
 
 
