@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/store/auth.store'
+import { authApi } from '@/api/auth'
 import AppShell from '@/components/layout/AppShell'
 import LoginPage from '@/pages/LoginPage'
 import SignupPage from '@/pages/SignupPage'
@@ -22,8 +23,29 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const { loadFromStorage } = useAuthStore()
-  useEffect(() => { loadFromStorage() }, [loadFromStorage])
+  const { setAuth } = useAuthStore()
+  // true while we're checking if the user has a valid refresh cookie
+  const [bootstrapping, setBootstrapping] = useState(true)
+
+  useEffect(() => {
+    // On every page load / refresh, silently exchange the HttpOnly refresh cookie
+    // for a new access token. If there's no cookie (or it's expired) the call
+    // fails quietly and the user sees the login page.
+    authApi.refresh()
+      .then(data => setAuth(data.user, data.organization, data.access_token))
+      .catch(() => { /* no valid cookie — stay unauthenticated */ })
+      .finally(() => setBootstrapping(false))
+  }, [setAuth])
+
+  // Avoid rendering protected routes (and triggering /auth/me calls) before
+  // we know whether the session is valid.
+  if (bootstrapping) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <>

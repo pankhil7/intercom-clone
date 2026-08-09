@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { teamApi } from '@/api/team'
 import { useAuthStore } from '@/store/auth.store'
-import { authApi } from '@/api/auth'
 import { Zap } from 'lucide-react'
 
 export default function AcceptInvitePage() {
@@ -28,9 +27,9 @@ export default function AcceptInvitePage() {
     setLoading(true)
     try {
       const data = await teamApi.acceptInvite({ token, ...form })
-      localStorage.setItem('access_token', data.access_token)
-      const me = await authApi.getMe()
-      setAuth(me.user, me.organization, data.access_token, data.refresh_token)
+      // acceptInvite returns same shape as login: access_token + user + org
+      // refresh_token is set as HttpOnly cookie by the backend
+      setAuth(data.user, data.organization, data.access_token)
       navigate('/inbox')
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to accept invitation.')

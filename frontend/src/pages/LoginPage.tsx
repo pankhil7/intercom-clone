@@ -17,13 +17,9 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
+      // Backend sets HttpOnly refresh_token cookie; response body has access_token + user + org
       const data = await authApi.login({ email, password })
-      const me = await (async () => {
-        localStorage.setItem('access_token', data.access_token)
-        const { authApi: a } = await import('@/api/auth')
-        return a.getMe()
-      })()
-      setAuth(me.user, me.organization, data.access_token, data.refresh_token)
+      setAuth(data.user, data.organization, data.access_token)
       navigate('/inbox')
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid email or password')

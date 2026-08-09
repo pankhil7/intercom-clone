@@ -10,50 +10,33 @@ interface Organization {
 interface AuthState {
   user: User | null
   organization: Organization | null
+  accessToken: string | null   // lives in memory only — never persisted to disk
   isAuthenticated: boolean
-  setAuth: (user: User, org: Organization, accessToken: string, refreshToken: string) => void
+  setAuth: (user: User, org: Organization, accessToken: string) => void
+  setAccessToken: (token: string) => void
   clearAuth: () => void
-  loadFromStorage: () => void
   updateUser: (updates: Partial<User>) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   organization: null,
+  accessToken: null,
   isAuthenticated: false,
 
-  setAuth: (user, organization, accessToken, refreshToken) => {
-    localStorage.setItem('access_token', accessToken)
-    localStorage.setItem('refresh_token', refreshToken)
-    localStorage.setItem('user', JSON.stringify(user))
-    localStorage.setItem('organization', JSON.stringify(organization))
-    set({ user, organization, isAuthenticated: true })
+  // Called after login / signup / silent refresh
+  // refresh_token arrives as an HttpOnly cookie — we never see or store it
+  setAuth: (user, organization, accessToken) => {
+    set({ user, organization, accessToken, isAuthenticated: true })
   },
+
+  setAccessToken: (token) => set({ accessToken: token }),
 
   clearAuth: () => {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('user')
-    localStorage.removeItem('organization')
-    set({ user: null, organization: null, isAuthenticated: false })
-  },
-
-  loadFromStorage: () => {
-    const token = localStorage.getItem('access_token')
-    const userStr = localStorage.getItem('user')
-    const orgStr = localStorage.getItem('organization')
-    if (token && userStr && orgStr) {
-      try {
-        set({
-          user: JSON.parse(userStr),
-          organization: JSON.parse(orgStr),
-          isAuthenticated: true,
-        })
-      } catch { /* invalid storage */ }
-    }
+    set({ user: null, organization: null, accessToken: null, isAuthenticated: false })
   },
 
   updateUser: (updates) => set((s) => ({
-    user: s.user ? { ...s.user, ...updates } : null
+    user: s.user ? { ...s.user, ...updates } : null,
   })),
 }))

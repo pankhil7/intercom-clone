@@ -43,11 +43,15 @@ fastapi_app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
-# CORS
+# CORS — explicit origins required when allow_credentials=True (wildcard forbidden by spec)
+_allowed_origins = list(filter(None, [settings.FRONTEND_URL, settings.WIDGET_CDN_URL]))
+if settings.DEBUG:
+    _allowed_origins += ["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"]
+
 fastapi_app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, settings.WIDGET_CDN_URL, "*"],
-    allow_credentials=True,
+    allow_origins=_allowed_origins,
+    allow_credentials=True,          # required for cookies to be sent cross-origin
     allow_methods=["*"],
     allow_headers=["*"],
 )

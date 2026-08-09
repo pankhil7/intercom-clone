@@ -21,9 +21,7 @@ export default function SignupPage() {
     setLoading(true)
     try {
       const data = await authApi.signup(form)
-      localStorage.setItem('access_token', data.access_token)
-      const me = await authApi.getMe()
-      setAuth(me.user, me.organization, data.access_token, data.refresh_token)
+      setAuth(data.user, data.organization, data.access_token)
       navigate('/inbox')
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Signup failed. Please try again.')

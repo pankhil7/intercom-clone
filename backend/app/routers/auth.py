@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
+from typing import Optional
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.organization import Organization
@@ -10,10 +12,8 @@ from app.schemas.auth import (
     LoginRequest,
     MeResponse,
     OrganizationResponse,
-    RefreshRequest,
     ResetPasswordRequest,
     SignupRequest,
-    TokenResponse,
     UserResponse,
 )
 from app.services.auth_service import (
@@ -27,24 +27,43 @@ from app.services.auth_service import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+REFRESH_COOKIE_NAME = "refresh_token"
+COOKIE_MAX_AGE = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60  # seconds
 
-@router.post("/signup", response_model=dict, status_code=status.HTTP_201_CREATED)
-def signup(payload: SignupRequest, db: Session = Depends(get_db)):
+
+def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
+    """Write the refresh token as an HttpOnly, Secure, SameSite=lax cookie."""
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        httponly=True,                        # JS cannot read it
+        secure=not settings.DEBUG,            # HTTPS only in production
+        samesite="lax",                       # sent on top-level navigations, blocks CSRF
+        max_age=COOKIE_MAX_AGE,
+        path="/api/v1/auth",                  # scoped — only sent to auth endpoints
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path="/api/v1/auth",
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="lax",
+    )
+
+
+@router.post("/signup", status_code=status.HTTP_201_CREATED)
+def signup(payload: SignupRequest, response: Response, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == payload.email.lower()).first()
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
     slug = generate_org_slug(payload.organization_name, db)
-
-    org = Organization(
-        name=payload.organization_name,
-        slug=slug,
-    )
+    org = Organization(name=payload.organization_name, slug=slug)
     db.add(org)
-    db.flush()  # get org.id before creating user
+    db.flush()
 
     user = User(
         organization_id=org.id,
@@ -61,64 +80,80 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
     access_token = create_access_token(str(user.id), str(org.id), user.role)
     refresh_token = create_refresh_token(str(user.id))
 
+    _set_refresh_cookie(response, refresh_token)
+
+    # Only the short-lived access token goes in the response body
     return {
         "access_token": access_token,
-        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": UserResponse.model_validate(user).model_dump(),
         "organization": OrganizationResponse.model_validate(org).model_dump(),
     }
 
 
-@router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+@router.post("/login")
+def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = authenticate_user(db, payload.email, payload.password)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
 
     access_token = create_access_token(str(user.id), str(user.organization_id), user.role)
     refresh_token = create_refresh_token(str(user.id))
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
+    _set_refresh_cookie(response, refresh_token)
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": UserResponse.model_validate(user).model_dump(),
+        "organization": OrganizationResponse.model_validate(org).model_dump(),
+    }
 
 
-@router.post("/refresh", response_model=TokenResponse)
-def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
-    token_data = decode_refresh_token(payload.refresh_token)
+@router.post("/refresh")
+def refresh(
+    response: Response,
+    db: Session = Depends(get_db),
+    refresh_token: Optional[str] = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+):
+    """
+    Client never touches the refresh token — it arrives automatically via
+    the HttpOnly cookie. Returns a new access token in the body and
+    rotates the refresh cookie.
+    """
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
+
+    token_data = decode_refresh_token(refresh_token)
     if not token_data:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token",
-        )
+        _clear_refresh_cookie(response)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
 
-    user = db.query(User).filter(
-        User.id == token_data["sub"],
-        User.is_active == True,
-    ).first()
+    user = db.query(User).filter(User.id == token_data["sub"], User.is_active == True).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-        )
+        _clear_refresh_cookie(response)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-    access_token = create_access_token(str(user.id), str(user.organization_id), user.role)
-    new_refresh_token = create_refresh_token(str(user.id))
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=new_refresh_token,
-    )
+    new_access_token = create_access_token(str(user.id), str(user.organization_id), user.role)
+    new_refresh_token = create_refresh_token(str(user.id))   # rotate — old token is discarded
+
+    _set_refresh_cookie(response, new_refresh_token)
+
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer",
+        "user": UserResponse.model_validate(user).model_dump(),
+        "organization": OrganizationResponse.model_validate(org).model_dump(),
+    }
 
 
 @router.post("/logout")
-def logout(current_user: User = Depends(get_current_user)):
-    # Stateless JWT – just acknowledge; client should discard the token
+def logout(response: Response, current_user: User = Depends(get_current_user)):
+    _clear_refresh_cookie(response)
     return {"message": "ok"}
 
 
@@ -127,7 +162,6 @@ def me(current_user: User = Depends(get_current_user), db: Session = Depends(get
     org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
     if not org:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
-
     return MeResponse(
         user=UserResponse.model_validate(current_user),
         organization=OrganizationResponse.model_validate(org),
@@ -136,11 +170,9 @@ def me(current_user: User = Depends(get_current_user), db: Session = Depends(get
 
 @router.post("/forgot-password")
 def forgot_password(payload: ForgotPasswordRequest):
-    # Stub – email sending would be wired here
     return {"message": "ok"}
 
 
 @router.post("/reset-password")
 def reset_password(payload: ResetPasswordRequest):
-    # Stub – token validation and password update would happen here
     return {"message": "ok"}
