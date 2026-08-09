@@ -173,6 +173,7 @@ async def create_conversation(
     )
     asyncio.create_task(
         fire_event(
+            db,
             str(current_user.organization_id),
             "conversation.created",
             {"id": str(conv.id)},
@@ -361,6 +362,7 @@ async def send_message(
     )
     asyncio.create_task(
         fire_event(
+            db,
             str(current_user.organization_id),
             "message.created",
             {"conversation_id": str(conv.id), "message_id": str(msg.id)},
@@ -496,6 +498,7 @@ async def resolve_conversation(
     )
     asyncio.create_task(
         fire_event(
+            db,
             str(current_user.organization_id),
             "conversation.resolved",
             {"id": str(conv.id)},

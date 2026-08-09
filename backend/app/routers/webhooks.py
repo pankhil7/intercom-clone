@@ -143,6 +143,7 @@ async def test_webhook(
 
     asyncio.create_task(
         fire_event(
+            db,
             str(current_user.organization_id),
             "test",
             {"message": "This is a test event from your Intercom clone."},
