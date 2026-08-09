@@ -21,7 +21,7 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 
 
 @router.post("/summarize/{conversation_id}", response_model=SummaryResponse)
-def summarize(
+async def summarize(
     conversation_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -34,12 +34,14 @@ def summarize(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
 
     logger.info("ai_summarize_requested", conversation_id=str(conversation_id), requested_by=str(current_user.id))
-    result = summarize_conversation(conversation=conv, db=db)
-    return result
+    result, cached = await summarize_conversation(db=db, conversation_id=conversation_id)
+    if not result:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="AI service unavailable")
+    return SummaryResponse(**result, cached=cached)
 
 
 @router.post("/draft/{conversation_id}", response_model=DraftResponse, status_code=status.HTTP_201_CREATED)
-def draft(
+async def draft(
     conversation_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -52,7 +54,9 @@ def draft(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
 
     logger.info("ai_draft_requested", conversation_id=str(conversation_id), requested_by=str(current_user.id))
-    ai_draft = generate_draft(conversation=conv, db=db)
+    ai_draft = await generate_draft(db=db, conversation_id=conversation_id)
+    if not ai_draft:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="AI service unavailable")
 
     return DraftResponse(
         id=ai_draft.id,
